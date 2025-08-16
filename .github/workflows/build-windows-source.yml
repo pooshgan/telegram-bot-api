@@ -1,0 +1,62 @@
+name: Build Telegram Bot API Static for Windows from Source
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        repository: tdlib/telegram-bot-api
+        submodules: recursive
+
+    - name: Install Visual Studio Build Tools
+      run: choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --includeOptional" -y
+      env:
+        choco: choco.exe
+      shell: powershell
+
+    - name: Install CMake
+      run: choco install cmake -y
+      env:
+        choco: choco.exe
+      shell: powershell
+
+    - name: Install Git
+      run: choco install git -y
+      env:
+        choco: choco.exe
+      shell: powershell
+
+    - name: Refresh PATH
+      run: |
+        Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+        Update-SessionEnvironment
+      shell: powershell
+
+    - name: Build and Install Telegram Bot API
+      run: |
+        git clone https://github.com/Microsoft/vcpkg.git
+        cd vcpkg
+        ./bootstrap-vcpkg.bat
+        ./vcpkg.exe install gperf:x64-windows openssl:x64-windows zlib:x64-windows
+        cd ..
+        Remove-Item build -Force -Recurse -ErrorAction SilentlyContinue
+        mkdir build
+        cd build
+        cmake -A x64 -DCMAKE_INSTALL_PREFIX:PATH=.. -DCMAKE_TOOLCHAIN_FILE:FILEPATH=../vcpkg/scripts/buildsystems/vcpkg.cmake ..
+        cmake --build . --target install --config Release
+        cd ..
+        dir bin/telegram-bot-api*
+      shell: powershell
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: telegram-bot-api-windows
+        path: bin/telegram-bot-api.exe
