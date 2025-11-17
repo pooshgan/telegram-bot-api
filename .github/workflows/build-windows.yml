@@ -1,6 +1,7 @@
 name: Build Telegram Bot API Static for Windows
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
