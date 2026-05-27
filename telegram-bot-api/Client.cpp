@@ -296,6 +296,7 @@ bool Client::init_methods() {
   methods_.emplace("answerwebappquery", &Client::process_answer_web_app_query_query);
   methods_.emplace("answerguestquery", &Client::process_answer_guest_query_query);
   methods_.emplace("answerinlinequery", &Client::process_answer_inline_query_query);
+  methods_.emplace("answerchatjoinrequestquery", &Client::process_answer_chat_join_request_query_query);
   methods_.emplace("savepreparedinlinemessage", &Client::process_save_prepared_inline_message_query);
   methods_.emplace("savepreparedkeyboardbutton", &Client::process_save_prepared_keyboard_button_query);
   methods_.emplace("answercallbackquery", &Client::process_answer_callback_query_query);
@@ -14420,6 +14421,25 @@ td::Status Client::process_answer_inline_query_query(PromisedQueryPtr &query) {
                                                             std::move(results), cache_time, next_offset),
                      td::make_unique<TdOnOkQueryCallback>(std::move(query)));
       });
+  return td::Status::OK();
+}
+
+td::Status Client::process_answer_chat_join_request_query_query(PromisedQueryPtr &query) {
+  auto query_id = td::to_integer<int64>(query->arg("chat_join_request_query_id"));
+  auto result_str = td::to_lower(td::trim(query->arg("result")));
+  object_ptr<td_api::ChatJoinRequestResult> result;
+  if (result_str == "approve") {
+    result = make_object<td_api::chatJoinRequestResultApproved>();
+  } else if (result_str == "decline") {
+    result = make_object<td_api::chatJoinRequestResultDeclined>();
+  } else if (result_str == "queue") {
+    result = make_object<td_api::chatJoinRequestResultQueued>();
+  } else {
+    return td::Status::Error(400, "Invalid query result specified");
+  }
+
+  send_request(make_object<td_api::answerChatJoinRequestQuery>(query_id, std::move(result), td::string()),
+               td::make_unique<TdOnOkQueryCallback>(std::move(query)));
   return td::Status::OK();
 }
 
