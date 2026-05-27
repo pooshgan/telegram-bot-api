@@ -493,6 +493,7 @@ class Client::JsonUser final : public td::Jsonable {
       object("has_topics_enabled", td::JsonBool(user_info->has_topics));
       object("allows_users_to_create_topics", td::JsonBool(user_info->allows_users_to_create_topics));
       object("can_manage_bots", td::JsonBool(user_info->can_manage_bots));
+      object("supports_join_request_queries", td::JsonBool(user_info->is_guard));
     }
   }
 
@@ -16581,6 +16582,7 @@ void Client::add_user(UserInfo *user_info, object_ptr<td_api::user> &&user) {
       user_info->has_topics = bot->has_topics_;
       user_info->allows_users_to_create_topics = bot->allows_users_to_create_topics_;
       user_info->can_manage_bots = bot->can_manage_bots_;
+      user_info->is_guard = bot->is_guard_;
       break;
     }
     case td_api::userTypeDeleted::ID:
