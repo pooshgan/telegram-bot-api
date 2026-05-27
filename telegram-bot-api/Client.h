@@ -133,6 +133,7 @@ class Client final : public WebhookActor::Callback {
   class JsonDice;
   class JsonGame;
   class JsonInvoice;
+  class JsonLiveLocation;
   class JsonLocation;
   class JsonVenue;
   class JsonPollMedia;
@@ -679,12 +680,10 @@ class Client final : public WebhookActor::Callback {
 
   td::Result<object_ptr<td_api::InputMessageContent>> get_input_media(const Query *query, td::Slice field_name) const;
 
-  td::Result<object_ptr<td_api::InputMessageContent>> get_input_poll_media(const Query *query,
-                                                                           td::JsonValue &&input_media,
-                                                                           bool for_option) const;
+  td::Result<object_ptr<td_api::InputPollMedia>> get_input_poll_media(const Query *query, td::JsonValue &&input_media,
+                                                                      bool for_option) const;
 
-  td::Result<object_ptr<td_api::InputMessageContent>> get_input_poll_media(const Query *query,
-                                                                           td::Slice field_name) const;
+  td::Result<object_ptr<td_api::InputPollMedia>> get_input_poll_media(const Query *query, td::Slice field_name) const;
 
   td::Result<td::vector<object_ptr<td_api::InputMessageContent>>> get_input_message_contents(
       const Query *query, td::Slice field_name) const;
@@ -1238,6 +1237,8 @@ class Client final : public WebhookActor::Callback {
   static td::vector<int64> get_sent_gift_sticker_set_ids(const object_ptr<td_api::SentGift> &gift);
 
   static td::vector<int64> get_message_content_sticker_set_ids(const object_ptr<td_api::MessageContent> &content);
+
+  static td::vector<int64> get_poll_media_sticker_set_ids(const object_ptr<td_api::PollMedia> &media);
 
   static td::vector<int64> get_message_sticker_set_ids(const MessageInfo *message_info);
 

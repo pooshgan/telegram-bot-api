@@ -776,6 +776,34 @@ class Client::JsonStickers final : public td::Jsonable {
   const Client *client_;
 };
 
+class Client::JsonLiveLocation final : public td::Jsonable {
+ public:
+  JsonLiveLocation(const td_api::liveLocation *location, double expires_in)
+      : location_(location), expires_in_(expires_in) {
+  }
+  void store(td::JsonValueScope *scope) const {
+    auto object = scope->enter_object();
+    object("latitude", location_->location_->latitude_);
+    object("longitude", location_->location_->longitude_);
+    if (expires_in_ > 0.0) {
+      object("live_period", location_->live_period_);
+      if (location_->heading_ > 0) {
+        object("heading", location_->heading_);
+      }
+      if (location_->proximity_alert_radius_ > 0) {
+        object("proximity_alert_radius", location_->proximity_alert_radius_);
+      }
+    }
+    if (location_->location_->horizontal_accuracy_ > 0) {
+      object("horizontal_accuracy", location_->location_->horizontal_accuracy_);
+    }
+  }
+
+ private:
+  const td_api::liveLocation *location_;
+  double expires_in_;
+};
+
 class Client::JsonLocation final : public td::Jsonable {
  public:
   JsonLocation(const td_api::location *location, double expires_in = 0.0, int32 live_period = 0, int32 heading = 0,
@@ -2288,64 +2316,68 @@ class Client::JsonInvoice final : public td::Jsonable {
 
 class Client::JsonPollMedia final : public td::Jsonable {
  public:
-  JsonPollMedia(const td_api::MessageContent *content, const Client *client) : content_(content), client_(client) {
-    CHECK(content_ != nullptr);
+  JsonPollMedia(const td_api::PollMedia *media, const Client *client) : media_(media), client_(client) {
+    CHECK(media_ != nullptr);
   }
   void store(td::JsonValueScope *scope) const {
     auto object = scope->enter_object();
-    switch (content_->get_id()) {
-      case td_api::messageAnimation::ID: {
-        auto content = static_cast<const td_api::messageAnimation *>(content_);
-        object("animation", JsonAnimation(content->animation_.get(), false, client_));
+    switch (media_->get_id()) {
+      case td_api::pollMediaAnimation::ID: {
+        auto media = static_cast<const td_api::pollMediaAnimation *>(media_);
+        object("animation", JsonAnimation(media->animation_.get(), false, client_));
         break;
       }
-      case td_api::messageAudio::ID: {
-        auto content = static_cast<const td_api::messageAudio *>(content_);
-        object("audio", JsonAudio(content->audio_.get(), client_));
+      case td_api::pollMediaAudio::ID: {
+        auto media = static_cast<const td_api::pollMediaAudio *>(media_);
+        object("audio", JsonAudio(media->audio_.get(), client_));
         break;
       }
-      case td_api::messageDocument::ID: {
-        auto content = static_cast<const td_api::messageDocument *>(content_);
-        object("document", JsonDocument(content->document_.get(), client_));
+      case td_api::pollMediaDocument::ID: {
+        auto media = static_cast<const td_api::pollMediaDocument *>(media_);
+        object("document", JsonDocument(media->document_.get(), client_));
         break;
       }
-      case td_api::messageLocation::ID: {
-        auto content = static_cast<const td_api::messageLocation *>(content_);
-        object("location", JsonLocation(content->location_.get()));
+      case td_api::pollMediaLink::ID: {
+        // auto media = static_cast<const td_api::pollMediaLink *>(media_);
         break;
       }
-      case td_api::messagePhoto::ID: {
-        auto content = static_cast<const td_api::messagePhoto *>(content_);
-        if (content->video_ != nullptr) {
-          object("live_photo", JsonLivePhoto(content->photo_.get(), content->video_.get(), client_));
+      case td_api::pollMediaLocation::ID: {
+        auto media = static_cast<const td_api::pollMediaLocation *>(media_);
+        object("location", JsonLocation(media->location_.get()));
+        break;
+      }
+      case td_api::pollMediaPhoto::ID: {
+        auto media = static_cast<const td_api::pollMediaPhoto *>(media_);
+        if (media->video_ != nullptr) {
+          object("live_photo", JsonLivePhoto(media->photo_.get(), media->video_.get(), client_));
         } else {
-          object("photo", JsonPhoto(content->photo_.get(), client_));
+          object("photo", JsonPhoto(media->photo_.get(), client_));
         }
         break;
       }
-      case td_api::messageSticker::ID: {
-        auto content = static_cast<const td_api::messageSticker *>(content_);
-        object("sticker", JsonSticker(content->sticker_.get(), client_));
+      case td_api::pollMediaSticker::ID: {
+        auto media = static_cast<const td_api::pollMediaSticker *>(media_);
+        object("sticker", JsonSticker(media->sticker_.get(), client_));
         break;
       }
-      case td_api::messageVenue::ID: {
-        auto content = static_cast<const td_api::messageVenue *>(content_);
-        object("venue", JsonVenue(content->venue_.get()));
+      case td_api::pollMediaVenue::ID: {
+        auto media = static_cast<const td_api::pollMediaVenue *>(media_);
+        object("venue", JsonVenue(media->venue_.get()));
         break;
       }
-      case td_api::messageVideo::ID: {
-        auto content = static_cast<const td_api::messageVideo *>(content_);
-        object("video", JsonVideo(content->video_.get(), content->cover_.get(), content->start_timestamp_,
-                                  &content->alternative_videos_, client_));
+      case td_api::pollMediaVideo::ID: {
+        auto media = static_cast<const td_api::pollMediaVideo *>(media_);
+        object("video", JsonVideo(media->video_.get(), media->cover_.get(), media->start_timestamp_,
+                                  &media->alternative_videos_, client_));
         break;
       }
       default:
-        LOG(ERROR) << "Receive poll with " << to_string(*content_);
+        UNREACHABLE();
     }
   }
 
  private:
-  const td_api::MessageContent *content_;
+  const td_api::PollMedia *media_;
   const Client *client_;
 };
 
@@ -2377,7 +2409,7 @@ class Client::JsonPollOption final : public td::Jsonable {
 
 class Client::JsonPoll final : public td::Jsonable {
  public:
-  JsonPoll(const td_api::poll *poll, const td_api::formattedText *description, const td_api::MessageContent *media,
+  JsonPoll(const td_api::poll *poll, const td_api::formattedText *description, const td_api::PollMedia *media,
            const Client *client)
       : poll_(poll), description_(description), media_(media), client_(client) {
   }
@@ -2446,7 +2478,7 @@ class Client::JsonPoll final : public td::Jsonable {
  private:
   const td_api::poll *poll_;
   const td_api::formattedText *description_;
-  const td_api::MessageContent *media_;
+  const td_api::PollMedia *media_;
   const Client *client_;
 };
 
@@ -4018,10 +4050,14 @@ class Client::JsonExternalReplyInfo final : public td::Jsonable {
           object("invoice", JsonInvoice(content));
           break;
         }
+        case td_api::messageLiveLocation::ID: {
+          auto content = static_cast<const td_api::messageLiveLocation *>(reply_->content_.get());
+          object("location", JsonLiveLocation(content->location_.get(), content->expires_in_));
+          break;
+        }
         case td_api::messageLocation::ID: {
           auto content = static_cast<const td_api::messageLocation *>(reply_->content_.get());
-          object("location", JsonLocation(content->location_.get(), content->expires_in_, content->live_period_,
-                                          content->heading_, content->proximity_alert_radius_));
+          object("location", JsonLocation(content->location_.get()));
           break;
         }
         case td_api::messageStakeDice::ID: {
@@ -4297,10 +4333,14 @@ void Client::JsonMessage::store(td::JsonValueScope *scope) const {
       object("invoice", JsonInvoice(content));
       break;
     }
+    case td_api::messageLiveLocation::ID: {
+      auto content = static_cast<const td_api::messageLiveLocation *>(message_->content.get());
+      object("location", JsonLiveLocation(content->location_.get(), content->expires_in_));
+      break;
+    }
     case td_api::messageLocation::ID: {
       auto content = static_cast<const td_api::messageLocation *>(message_->content.get());
-      object("location", JsonLocation(content->location_.get(), content->expires_in_, content->live_period_,
-                                      content->heading_, content->proximity_alert_radius_));
+      object("location", JsonLocation(content->location_.get()));
       break;
     }
     case td_api::messageStakeDice::ID: {
@@ -4706,6 +4746,10 @@ void Client::JsonMessage::store(td::JsonValueScope *scope) const {
     case td_api::messageManagedBotCreated::ID: {
       auto content = static_cast<const td_api::messageManagedBotCreated *>(message_->content.get());
       object("managed_bot_created", JsonManagedBotCreated(content, client_));
+      break;
+    }
+    case td_api::messageRichMessage::ID: {
+      // auto content = static_cast<const td_api::messageRichMessage *>(message_->content.get());
       break;
     }
     default:
@@ -10126,7 +10170,12 @@ td::Result<td_api::object_ptr<td_api::InputMessageContent>> Client::get_input_me
     TRY_RESULT(live_period, object.get_optional_int_field("live_period"));
     TRY_RESULT(heading, object.get_optional_int_field("heading"));
     TRY_RESULT(proximity_alert_radius, object.get_optional_int_field("proximity_alert_radius"));
-    return make_object<td_api::inputMessageLocation>(std::move(location), live_period, heading, proximity_alert_radius);
+    if (live_period != 0) {
+      return make_object<td_api::inputMessageLiveLocation>(
+          make_object<td_api::liveLocation>(std::move(location), live_period, heading, proximity_alert_radius));
+    } else {
+      return make_object<td_api::inputMessageLocation>(std::move(location));
+    }
   }
 
   if (object.has_field("phone_number")) {
@@ -10386,8 +10435,7 @@ td::Result<td_api::object_ptr<td_api::InputInlineQueryResult>> Client::get_inlin
     }
 
     if (input_message_content == nullptr) {
-      input_message_content = make_object<td_api::inputMessageAudio>(nullptr, nullptr, audio_duration, title, performer,
-                                                                     std::move(caption));
+      input_message_content = make_object<td_api::inputMessageAudio>(nullptr, std::move(caption));
     }
     return make_object<td_api::inputInlineQueryResultAudio>(id, title, performer, audio_url, audio_duration,
                                                             std::move(reply_markup), std::move(input_message_content));
@@ -10417,7 +10465,7 @@ td::Result<td_api::object_ptr<td_api::InputInlineQueryResult>> Client::get_inlin
     }
 
     if (input_message_content == nullptr) {
-      input_message_content = make_object<td_api::inputMessageDocument>(nullptr, nullptr, false, std::move(caption));
+      input_message_content = make_object<td_api::inputMessageDocument>(nullptr, std::move(caption));
     }
     return make_object<td_api::inputInlineQueryResultDocument>(
         id, title, description, document_url, mime_type, thumbnail_url, thumbnail_width, thumbnail_height,
@@ -10444,8 +10492,7 @@ td::Result<td_api::object_ptr<td_api::InputInlineQueryResult>> Client::get_inlin
 
     if (input_message_content == nullptr) {
       input_message_content =
-          make_object<td_api::inputMessageAnimation>(nullptr, nullptr, td::vector<int32>(), gif_duration, gif_width,
-                                                     gif_height, std::move(caption), show_caption_above_media, false);
+          make_object<td_api::inputMessageAnimation>(nullptr, std::move(caption), show_caption_above_media, false);
     }
     return make_object<td_api::inputInlineQueryResultAnimation>(
         id, title, thumbnail_url, thumbnail_mime_type, gif_url, "image/gif", gif_duration, gif_width, gif_height,
@@ -10457,8 +10504,12 @@ td::Result<td_api::object_ptr<td_api::InputInlineQueryResult>> Client::get_inlin
       TRY_RESULT(live_period, object.get_optional_int_field("live_period"));
       TRY_RESULT(heading, object.get_optional_int_field("heading"));
       TRY_RESULT(proximity_alert_radius, object.get_optional_int_field("proximity_alert_radius"));
-      input_message_content =
-          make_object<td_api::inputMessageLocation>(std::move(location), live_period, heading, proximity_alert_radius);
+      if (live_period != 0) {
+        input_message_content = make_object<td_api::inputMessageLiveLocation>(
+            make_object<td_api::liveLocation>(std::move(location), live_period, heading, proximity_alert_radius));
+      } else {
+        input_message_content = make_object<td_api::inputMessageLocation>(std::move(location));
+      }
     }
 
     TRY_RESULT(location, get_location(object));
@@ -10485,8 +10536,7 @@ td::Result<td_api::object_ptr<td_api::InputInlineQueryResult>> Client::get_inlin
 
     if (input_message_content == nullptr) {
       input_message_content =
-          make_object<td_api::inputMessageAnimation>(nullptr, nullptr, td::vector<int32>(), mpeg4_duration, mpeg4_width,
-                                                     mpeg4_height, std::move(caption), show_caption_above_media, false);
+          make_object<td_api::inputMessageAnimation>(nullptr, std::move(caption), show_caption_above_media, false);
     }
     return make_object<td_api::inputInlineQueryResultAnimation>(
         id, title, thumbnail_url, thumbnail_mime_type, mpeg4_url, "video/mp4", mpeg4_duration, mpeg4_width,
@@ -10504,8 +10554,7 @@ td::Result<td_api::object_ptr<td_api::InputInlineQueryResult>> Client::get_inlin
 
     if (input_message_content == nullptr) {
       input_message_content =
-          make_object<td_api::inputMessagePhoto>(nullptr, nullptr, nullptr, td::vector<int32>(), 0, 0,
-                                                 std::move(caption), show_caption_above_media, nullptr, false);
+          make_object<td_api::inputMessagePhoto>(nullptr, std::move(caption), show_caption_above_media, nullptr, false);
     }
     return make_object<td_api::inputInlineQueryResultPhoto>(id, title, description, thumbnail_url, photo_url,
                                                             photo_width, photo_height, std::move(reply_markup),
@@ -10540,15 +10589,14 @@ td::Result<td_api::object_ptr<td_api::InputInlineQueryResult>> Client::get_inlin
     TRY_RESULT(video_width, object.get_optional_int_field("video_width"));
     TRY_RESULT(video_height, object.get_optional_int_field("video_height"));
     TRY_RESULT(video_duration, object.get_optional_int_field("video_duration"));
-    TRY_RESULT(video_start_timestamp, object.get_optional_int_field("video_start_timestamp"));
+    // TRY_RESULT(video_start_timestamp, object.get_optional_int_field("video_start_timestamp"));
     if (video_url.empty()) {
       TRY_RESULT_ASSIGN(video_url, object.get_required_string_field("video_file_id"));
     }
 
     if (input_message_content == nullptr) {
-      input_message_content = make_object<td_api::inputMessageVideo>(
-          nullptr, nullptr, nullptr, video_start_timestamp, td::vector<int32>(), video_duration, video_width,
-          video_height, false, std::move(caption), show_caption_above_media, nullptr, false);
+      input_message_content =
+          make_object<td_api::inputMessageVideo>(nullptr, std::move(caption), show_caption_above_media, nullptr, false);
     }
     return make_object<td_api::inputInlineQueryResultVideo>(id, title, description, thumbnail_url, video_url, mime_type,
                                                             video_width, video_height, video_duration,
@@ -11697,8 +11745,9 @@ td::Result<td_api::object_ptr<td_api::InputMessageContent>> Client::get_input_me
   TRY_RESULT(input_thumbnail, get_input_thumbnail(query, object, true));
 
   if (type == "photo") {
-    return make_object<td_api::inputMessagePhoto>(std::move(input_file), nullptr, nullptr, td::vector<int32>(), 0, 0,
-                                                  std::move(caption), show_caption_above_media, nullptr, has_spoiler);
+    return make_object<td_api::inputMessagePhoto>(
+        make_object<td_api::inputPhoto>(std::move(input_file), nullptr, nullptr, td::vector<int32>(), 0, 0),
+        std::move(caption), show_caption_above_media, nullptr, has_spoiler);
   }
   if (type == "live_photo") {
     TRY_RESULT(photo, object.get_optional_string_field("photo"));
@@ -11706,9 +11755,10 @@ td::Result<td_api::object_ptr<td_api::InputMessageContent>> Client::get_input_me
     if (input_photo == nullptr) {
       return td::Status::Error("photo not found");
     }
-    return make_object<td_api::inputMessagePhoto>(std::move(input_photo), nullptr, std::move(input_file),
-                                                  td::vector<int32>(), 0, 0, std::move(caption),
-                                                  show_caption_above_media, nullptr, has_spoiler);
+    return make_object<td_api::inputMessagePhoto>(
+        make_object<td_api::inputPhoto>(std::move(input_photo), nullptr, std::move(input_file), td::vector<int32>(), 0,
+                                        0),
+        std::move(caption), show_caption_above_media, nullptr, has_spoiler);
   }
   if (type == "video") {
     TRY_RESULT(width, object.get_optional_int_field("width"));
@@ -11723,10 +11773,11 @@ td::Result<td_api::object_ptr<td_api::InputMessageContent>> Client::get_input_me
     duration = td::clamp(duration, 0, MAX_DURATION);
     start_timestamp = td::clamp(start_timestamp, 0, MAX_DURATION);
 
-    return make_object<td_api::inputMessageVideo>(std::move(input_file), std::move(input_thumbnail),
-                                                  std::move(input_cover), start_timestamp, td::vector<int32>(),
-                                                  duration, width, height, supports_streaming, std::move(caption),
-                                                  show_caption_above_media, nullptr, has_spoiler);
+    return make_object<td_api::inputMessageVideo>(
+        make_object<td_api::inputVideo>(std::move(input_file), std::move(input_thumbnail), std::move(input_cover),
+                                        start_timestamp, td::vector<int32>(), duration, width, height,
+                                        supports_streaming),
+        std::move(caption), show_caption_above_media, nullptr, has_spoiler);
   }
   if (type == "animation") {
     if (for_album) {
@@ -11738,22 +11789,26 @@ td::Result<td_api::object_ptr<td_api::InputMessageContent>> Client::get_input_me
     width = td::clamp(width, 0, MAX_LENGTH);
     height = td::clamp(height, 0, MAX_LENGTH);
     duration = td::clamp(duration, 0, MAX_DURATION);
-    return make_object<td_api::inputMessageAnimation>(std::move(input_file), std::move(input_thumbnail),
-                                                      td::vector<int32>(), duration, width, height, std::move(caption),
-                                                      show_caption_above_media, has_spoiler);
+    return make_object<td_api::inputMessageAnimation>(
+        make_object<td_api::inputAnimation>(std::move(input_file), std::move(input_thumbnail), td::vector<int32>(),
+                                            duration, width, height),
+        std::move(caption), show_caption_above_media, has_spoiler);
   }
   if (type == "audio") {
     TRY_RESULT(duration, object.get_optional_int_field("duration"));
     TRY_RESULT(title, object.get_optional_string_field("title"));
     TRY_RESULT(performer, object.get_optional_string_field("performer"));
     duration = td::clamp(duration, 0, MAX_DURATION);
-    return make_object<td_api::inputMessageAudio>(std::move(input_file), std::move(input_thumbnail), duration, title,
-                                                  performer, std::move(caption));
+    return make_object<td_api::inputMessageAudio>(
+        make_object<td_api::inputAudio>(std::move(input_file), std::move(input_thumbnail), duration, title, performer),
+        std::move(caption));
   }
   if (type == "document") {
     TRY_RESULT(disable_content_type_detection, object.get_optional_bool_field("disable_content_type_detection"));
-    return make_object<td_api::inputMessageDocument>(std::move(input_file), std::move(input_thumbnail),
-                                                     disable_content_type_detection || for_album, std::move(caption));
+    return make_object<td_api::inputMessageDocument>(
+        make_object<td_api::inputDocument>(std::move(input_file), std::move(input_thumbnail),
+                                           disable_content_type_detection || for_album),
+        std::move(caption));
   }
 
   return td::Status::Error(PSLICE() << "type \"" << type << "\" is unsupported");
@@ -11777,9 +11832,9 @@ td::Result<td_api::object_ptr<td_api::InputMessageContent>> Client::get_input_me
   return r_input_message_content.move_as_ok();
 }
 
-td::Result<td_api::object_ptr<td_api::InputMessageContent>> Client::get_input_poll_media(const Query *query,
-                                                                                         td::JsonValue &&input_media,
-                                                                                         bool for_option) const {
+td::Result<td_api::object_ptr<td_api::InputPollMedia>> Client::get_input_poll_media(const Query *query,
+                                                                                    td::JsonValue &&input_media,
+                                                                                    bool for_option) const {
   if (input_media.type() != td::JsonValue::Type::Object) {
     if (input_media.type() == td::JsonValue::Type::Null) {
       return nullptr;
@@ -11792,30 +11847,85 @@ td::Result<td_api::object_ptr<td_api::InputMessageContent>> Client::get_input_po
   TRY_RESULT(type, object.get_required_string_field("type"));
   if (type == "location") {
     TRY_RESULT(location, get_location(object));
-    return make_object<td_api::inputMessageLocation>(std::move(location), 0, 0, 0);
+    return make_object<td_api::inputPollMediaLocation>(std::move(location));
   }
   if (type == "venue") {
     TRY_RESULT(venue, get_venue(object));
-    return make_object<td_api::inputMessageVenue>(std::move(venue));
+    return make_object<td_api::inputPollMediaVenue>(std::move(venue));
   }
-  if (type != "animation" && type != "photo" && type != "live_photo" && type != "video" &&
-      (for_option ? type != "sticker" : type != "audio" && type != "document")) {
-    return td::Status::Error("invalid type specified");
+
+  TRY_RESULT(media, object.get_optional_string_field("media"));
+  auto input_file = get_input_file(query, td::Slice(), media, false);
+  if (input_file == nullptr) {
+    return td::Status::Error("media not found");
+  }
+  TRY_RESULT(input_thumbnail, get_input_thumbnail(query, object, true));
+
+  if (type == "photo") {
+    return make_object<td_api::inputPollMediaPhoto>(
+        make_object<td_api::inputPhoto>(std::move(input_file), nullptr, nullptr, td::vector<int32>(), 0, 0));
+  }
+  if (type == "live_photo") {
+    TRY_RESULT(photo, object.get_optional_string_field("photo"));
+    auto input_photo = get_input_file(query, td::Slice(), photo, false);
+    if (input_photo == nullptr) {
+      return td::Status::Error("photo not found");
+    }
+    return make_object<td_api::inputPollMediaPhoto>(make_object<td_api::inputPhoto>(
+        std::move(input_photo), nullptr, std::move(input_file), td::vector<int32>(), 0, 0));
+  }
+  if (type == "video") {
+    TRY_RESULT(width, object.get_optional_int_field("width"));
+    TRY_RESULT(height, object.get_optional_int_field("height"));
+    TRY_RESULT(duration, object.get_optional_int_field("duration"));
+    TRY_RESULT(cover, object.get_optional_string_field("cover"));
+    TRY_RESULT(start_timestamp, object.get_optional_int_field("start_timestamp"));
+    TRY_RESULT(supports_streaming, object.get_optional_bool_field("supports_streaming"));
+    auto input_cover = get_input_file(query, td::Slice(), cover, false);
+    width = td::clamp(width, 0, MAX_LENGTH);
+    height = td::clamp(height, 0, MAX_LENGTH);
+    duration = td::clamp(duration, 0, MAX_DURATION);
+    start_timestamp = td::clamp(start_timestamp, 0, MAX_DURATION);
+
+    return make_object<td_api::inputPollMediaVideo>(make_object<td_api::inputVideo>(
+        std::move(input_file), std::move(input_thumbnail), std::move(input_cover), start_timestamp, td::vector<int32>(),
+        duration, width, height, supports_streaming));
+  }
+  if (type == "animation") {
+    TRY_RESULT(width, object.get_optional_int_field("width"));
+    TRY_RESULT(height, object.get_optional_int_field("height"));
+    TRY_RESULT(duration, object.get_optional_int_field("duration"));
+    width = td::clamp(width, 0, MAX_LENGTH);
+    height = td::clamp(height, 0, MAX_LENGTH);
+    duration = td::clamp(duration, 0, MAX_DURATION);
+    return make_object<td_api::inputPollMediaAnimation>(make_object<td_api::inputAnimation>(
+        std::move(input_file), std::move(input_thumbnail), td::vector<int32>(), duration, width, height));
+  }
+
+  if (for_option ? type != "sticker" : type != "audio" && type != "document") {
+    return td::Status::Error(PSLICE() << "type \"" << type << "\" is unsupported");
   }
   if (type == "sticker") {
-    TRY_RESULT(media, object.get_optional_string_field("media"));
-    auto input_file = get_input_file(query, td::Slice(), media, false);
-    if (input_file == nullptr) {
-      return td::Status::Error("media not found");
-    }
-    return make_object<td_api::inputMessageSticker>(std::move(input_file), nullptr, 0, 0, td::string());
+    return make_object<td_api::inputPollMediaSticker>(std::move(input_file), std::move(input_thumbnail), 0, 0);
   }
-
-  return get_input_media(query, object, type, nullptr, false, false, false);
+  if (type == "audio") {
+    TRY_RESULT(duration, object.get_optional_int_field("duration"));
+    TRY_RESULT(title, object.get_optional_string_field("title"));
+    TRY_RESULT(performer, object.get_optional_string_field("performer"));
+    duration = td::clamp(duration, 0, MAX_DURATION);
+    return make_object<td_api::inputPollMediaAudio>(
+        make_object<td_api::inputAudio>(std::move(input_file), std::move(input_thumbnail), duration, title, performer));
+  }
+  if (type == "document") {
+    TRY_RESULT(disable_content_type_detection, object.get_optional_bool_field("disable_content_type_detection"));
+    return make_object<td_api::inputPollMediaDocument>(make_object<td_api::inputDocument>(
+        std::move(input_file), std::move(input_thumbnail), disable_content_type_detection));
+  }
+  UNREACHABLE();
 }
 
-td::Result<td_api::object_ptr<td_api::InputMessageContent>> Client::get_input_poll_media(const Query *query,
-                                                                                         td::Slice field_name) const {
+td::Result<td_api::object_ptr<td_api::InputPollMedia>> Client::get_input_poll_media(const Query *query,
+                                                                                    td::Slice field_name) const {
   auto media = query->arg(field_name);
   if (media.empty()) {
     return nullptr;
@@ -12909,9 +13019,10 @@ td::Status Client::process_send_animation_query(PromisedQueryPtr &query) {
   TRY_RESULT(caption, get_caption(query.get()));
   auto show_caption_above_media = to_bool(query->arg("show_caption_above_media"));
   auto has_spoiler = to_bool(query->arg("has_spoiler"));
-  do_send_message(make_object<td_api::inputMessageAnimation>(std::move(animation), std::move(thumbnail),
-                                                             td::vector<int32>(), duration, width, height,
-                                                             std::move(caption), show_caption_above_media, has_spoiler),
+  do_send_message(make_object<td_api::inputMessageAnimation>(
+                      make_object<td_api::inputAnimation>(std::move(animation), std::move(thumbnail),
+                                                          td::vector<int32>(), duration, width, height),
+                      std::move(caption), show_caption_above_media, has_spoiler),
                   std::move(query));
   return td::Status::OK();
 }
@@ -12926,9 +13037,11 @@ td::Status Client::process_send_audio_query(PromisedQueryPtr &query) {
   auto title = query->arg("title").str();
   auto performer = query->arg("performer").str();
   TRY_RESULT(caption, get_caption(query.get()));
-  do_send_message(make_object<td_api::inputMessageAudio>(std::move(audio), std::move(thumbnail), duration, title,
-                                                         performer, std::move(caption)),
-                  std::move(query));
+  do_send_message(
+      make_object<td_api::inputMessageAudio>(
+          make_object<td_api::inputAudio>(std::move(audio), std::move(thumbnail), duration, title, performer),
+          std::move(caption)),
+      std::move(query));
   return td::Status::OK();
 }
 
@@ -12946,9 +13059,11 @@ td::Status Client::process_send_document_query(PromisedQueryPtr &query) {
   auto thumbnail = get_input_thumbnail(query.get());
   TRY_RESULT(caption, get_caption(query.get()));
   bool disable_content_type_detection = to_bool(query->arg("disable_content_type_detection"));
-  do_send_message(make_object<td_api::inputMessageDocument>(std::move(document), std::move(thumbnail),
-                                                            disable_content_type_detection, std::move(caption)),
-                  std::move(query));
+  do_send_message(
+      make_object<td_api::inputMessageDocument>(
+          make_object<td_api::inputDocument>(std::move(document), std::move(thumbnail), disable_content_type_detection),
+          std::move(caption)),
+      std::move(query));
   return td::Status::OK();
 }
 
@@ -12960,10 +13075,10 @@ td::Status Client::process_send_photo_query(PromisedQueryPtr &query) {
   TRY_RESULT(caption, get_caption(query.get()));
   auto show_caption_above_media = to_bool(query->arg("show_caption_above_media"));
   auto has_spoiler = to_bool(query->arg("has_spoiler"));
-  do_send_message(
-      make_object<td_api::inputMessagePhoto>(std::move(photo), nullptr, nullptr, td::vector<int32>(), 0, 0,
-                                             std::move(caption), show_caption_above_media, nullptr, has_spoiler),
-      std::move(query));
+  do_send_message(make_object<td_api::inputMessagePhoto>(
+                      make_object<td_api::inputPhoto>(std::move(photo), nullptr, nullptr, td::vector<int32>(), 0, 0),
+                      std::move(caption), show_caption_above_media, nullptr, has_spoiler),
+                  std::move(query));
   return td::Status::OK();
 }
 
@@ -12980,8 +13095,9 @@ td::Status Client::process_send_live_photo_query(PromisedQueryPtr &query) {
   auto show_caption_above_media = to_bool(query->arg("show_caption_above_media"));
   auto has_spoiler = to_bool(query->arg("has_spoiler"));
   do_send_message(
-      make_object<td_api::inputMessagePhoto>(std::move(photo), nullptr, std::move(live_photo), td::vector<int32>(), 0,
-                                             0, std::move(caption), show_caption_above_media, nullptr, has_spoiler),
+      make_object<td_api::inputMessagePhoto>(
+          make_object<td_api::inputPhoto>(std::move(photo), nullptr, std::move(live_photo), td::vector<int32>(), 0, 0),
+          std::move(caption), show_caption_above_media, nullptr, has_spoiler),
       std::move(query));
   return td::Status::OK();
 }
@@ -13013,9 +13129,10 @@ td::Status Client::process_send_video_query(PromisedQueryPtr &query) {
   auto show_caption_above_media = to_bool(query->arg("show_caption_above_media"));
   auto has_spoiler = to_bool(query->arg("has_spoiler"));
   do_send_message(
-      make_object<td_api::inputMessageVideo>(std::move(video), std::move(thumbnail), std::move(cover), start_timestamp,
-                                             td::vector<int32>(), duration, width, height, supports_streaming,
-                                             std::move(caption), show_caption_above_media, nullptr, has_spoiler),
+      make_object<td_api::inputMessageVideo>(
+          make_object<td_api::inputVideo>(std::move(video), std::move(thumbnail), std::move(cover), start_timestamp,
+                                          td::vector<int32>(), duration, width, height, supports_streaming),
+          std::move(caption), show_caption_above_media, nullptr, has_spoiler),
       std::move(query));
   return td::Status::OK();
 }
@@ -13077,9 +13194,13 @@ td::Status Client::process_send_location_query(PromisedQueryPtr &query) {
   int32 heading = get_integer_arg(query.get(), "heading", 0);
   int32 proximity_alert_radius = get_integer_arg(query.get(), "proximity_alert_radius", 0);
 
-  do_send_message(
-      make_object<td_api::inputMessageLocation>(std::move(location), live_period, heading, proximity_alert_radius),
-      std::move(query));
+  if (live_period != 0) {
+    do_send_message(make_object<td_api::inputMessageLiveLocation>(make_object<td_api::liveLocation>(
+                        std::move(location), live_period, heading, proximity_alert_radius)),
+                    std::move(query));
+  } else {
+    do_send_message(make_object<td_api::inputMessageLocation>(std::move(location)), std::move(query));
+  }
   return td::Status::OK();
 }
 
@@ -13562,45 +13683,43 @@ td::Status Client::process_edit_message_live_location_query(PromisedQueryPtr &qu
   auto chat_id = query->arg("chat_id");
   auto message_id = get_message_id(query.get());
   TRY_RESULT(reply_markup, get_reply_markup(query.get(), bot_user_ids_));
+  auto live_location =
+      make_object<td_api::liveLocation>(std::move(location), live_period, heading, proximity_alert_radius);
 
   if (chat_id.empty() && message_id == 0) {
     TRY_RESULT(inline_message_id, get_inline_message_id(query.get()));
     resolve_reply_markup_bot_usernames(
         std::move(reply_markup), std::move(query),
-        [this, inline_message_id = inline_message_id.str(), location = std::move(location), live_period, heading,
-         proximity_alert_radius](object_ptr<td_api::ReplyMarkup> reply_markup, PromisedQueryPtr query) mutable {
+        [this, inline_message_id = inline_message_id.str(), live_location = std::move(live_location)](
+            object_ptr<td_api::ReplyMarkup> reply_markup, PromisedQueryPtr query) mutable {
           send_request(make_object<td_api::editInlineMessageLiveLocation>(inline_message_id, std::move(reply_markup),
-                                                                          std::move(location), live_period, heading,
-                                                                          proximity_alert_radius),
+                                                                          std::move(live_location)),
                        td::make_unique<TdOnEditInlineMessageCallback>(std::move(query)));
         });
   } else {
     resolve_reply_markup_bot_usernames(
         std::move(reply_markup), std::move(query),
         [this, business_connection_id = business_connection_id.str(), chat_id_str = chat_id.str(), message_id,
-         location = std::move(location), live_period, heading,
-         proximity_alert_radius](object_ptr<td_api::ReplyMarkup> reply_markup, PromisedQueryPtr query) mutable {
+         live_location = std::move(live_location)](object_ptr<td_api::ReplyMarkup> reply_markup,
+                                                   PromisedQueryPtr query) mutable {
           if (!business_connection_id.empty()) {
             return check_business_connection_chat_id(
                 business_connection_id, chat_id_str, std::move(query),
-                [this, message_id, location = std::move(location), live_period, heading, proximity_alert_radius,
-                 reply_markup = std::move(reply_markup)](const BusinessConnection *business_connection, int64 chat_id,
-                                                         PromisedQueryPtr query) mutable {
-                  send_request(make_object<td_api::editBusinessMessageLiveLocation>(
-                                   business_connection->id_, chat_id, message_id, std::move(reply_markup),
-                                   std::move(location), live_period, heading, proximity_alert_radius),
+                [this, message_id, live_location = std::move(live_location), reply_markup = std::move(reply_markup)](
+                    const BusinessConnection *business_connection, int64 chat_id, PromisedQueryPtr query) mutable {
+                  send_request(make_object<td_api::editBusinessMessageLiveLocation>(business_connection->id_, chat_id,
+                                                                                    message_id, std::move(reply_markup),
+                                                                                    std::move(live_location)),
                                td::make_unique<TdOnReturnBusinessMessageCallback>(this, business_connection->id_,
                                                                                   std::move(query)));
                 });
           }
 
           check_message(chat_id_str, message_id, false, AccessRights::Edit, "message to edit", std::move(query),
-                        [this, location = std::move(location), live_period, heading, proximity_alert_radius,
-                         reply_markup = std::move(reply_markup)](int64 chat_id, int64 message_id,
-                                                                 PromisedQueryPtr query) mutable {
+                        [this, live_location = std::move(live_location), reply_markup = std::move(reply_markup)](
+                            int64 chat_id, int64 message_id, PromisedQueryPtr query) mutable {
                           send_request(make_object<td_api::editMessageLiveLocation>(
-                                           chat_id, message_id, std::move(reply_markup), std::move(location),
-                                           live_period, heading, proximity_alert_radius),
+                                           chat_id, message_id, std::move(reply_markup), std::move(live_location)),
                                        td::make_unique<TdOnEditMessageCallback>(this, std::move(query)));
                         });
         });
@@ -17539,6 +17658,7 @@ bool Client::need_skip_update_message(int64 chat_id, const MessageInfo *message_
     case td_api::messageUpgradedGiftPurchaseOfferRejected::ID:
     case td_api::messageChatHasProtectedContentToggled::ID:
     case td_api::messageChatHasProtectedContentDisableRequested::ID:
+    case td_api::messageRichMessage::ID:
       return true;
     default:
       break;
@@ -17845,7 +17965,7 @@ td::vector<td::int64> Client::get_message_content_sticker_set_ids(const object_p
       td::vector<int64> sticker_set_ids;
       for (const auto &option : poll->options_) {
         if (option->media_ != nullptr) {
-          td::combine(sticker_set_ids, get_message_content_sticker_set_ids(option->media_));
+          td::combine(sticker_set_ids, get_poll_media_sticker_set_ids(option->media_));
         }
       }
       return sticker_set_ids;
@@ -17867,6 +17987,22 @@ td::vector<td::int64> Client::get_message_content_sticker_set_ids(const object_p
     case td_api::messageUpgradedGiftPurchaseOfferRejected::ID:
       return get_upgraded_gift_sticker_set_ids(
           static_cast<const td_api::messageUpgradedGiftPurchaseOfferRejected *>(content.get())->gift_);
+    default:
+      break;
+  }
+  return {};
+}
+
+td::vector<td::int64> Client::get_poll_media_sticker_set_ids(const object_ptr<td_api::PollMedia> &media) {
+  CHECK(media != nullptr);
+  switch (media->get_id()) {
+    case td_api::pollMediaSticker::ID: {
+      auto sticker_set_id = static_cast<const td_api::pollMediaSticker *>(media.get())->sticker_->set_id_;
+      if (sticker_set_id != 0) {
+        return {sticker_set_id};
+      }
+      break;
+    }
     default:
       break;
   }
