@@ -11872,6 +11872,13 @@ td::Result<td_api::object_ptr<td_api::InputPollMedia>> Client::get_input_poll_me
     TRY_RESULT(venue, get_venue(object));
     return make_object<td_api::inputPollMediaVenue>(std::move(venue));
   }
+  if (type == "link") {
+    if (!for_option) {
+      return td::Status::Error(PSLICE() << "type \"" << type << "\" is unsupported");
+    }
+    TRY_RESULT(url, object.get_required_string_field("url"));
+    return make_object<td_api::inputPollMediaLink>(url);
+  }
 
   TRY_RESULT(media, object.get_optional_string_field("media"));
   auto input_file = get_input_file(query, td::Slice(), media, false);
