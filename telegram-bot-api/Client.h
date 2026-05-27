@@ -857,6 +857,7 @@ class Client final : public WebhookActor::Callback {
   td::Status process_answer_guest_query_query(PromisedQueryPtr &query);
   td::Status process_answer_inline_query_query(PromisedQueryPtr &query);
   td::Status process_answer_chat_join_request_query_query(PromisedQueryPtr &query);
+  td::Status process_send_chat_join_request_web_app_query(PromisedQueryPtr &query);
   td::Status process_save_prepared_inline_message_query(PromisedQueryPtr &query);
   td::Status process_save_prepared_keyboard_button_query(PromisedQueryPtr &query);
   td::Status process_answer_callback_query_query(PromisedQueryPtr &query);

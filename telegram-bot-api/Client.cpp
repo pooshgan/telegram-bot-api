@@ -297,6 +297,7 @@ bool Client::init_methods() {
   methods_.emplace("answerguestquery", &Client::process_answer_guest_query_query);
   methods_.emplace("answerinlinequery", &Client::process_answer_inline_query_query);
   methods_.emplace("answerchatjoinrequestquery", &Client::process_answer_chat_join_request_query_query);
+  methods_.emplace("sendchatjoinrequestwebapp", &Client::process_send_chat_join_request_web_app_query);
   methods_.emplace("savepreparedinlinemessage", &Client::process_save_prepared_inline_message_query);
   methods_.emplace("savepreparedkeyboardbutton", &Client::process_save_prepared_keyboard_button_query);
   methods_.emplace("answercallbackquery", &Client::process_answer_callback_query_query);
@@ -14439,6 +14440,14 @@ td::Status Client::process_answer_chat_join_request_query_query(PromisedQueryPtr
   }
 
   send_request(make_object<td_api::answerChatJoinRequestQuery>(query_id, std::move(result), td::string()),
+               td::make_unique<TdOnOkQueryCallback>(std::move(query)));
+  return td::Status::OK();
+}
+
+td::Status Client::process_send_chat_join_request_web_app_query(PromisedQueryPtr &query) {
+  auto query_id = td::to_integer<int64>(query->arg("chat_join_request_query_id"));
+  TRY_RESULT(web_app_url, get_required_string_arg(query.get(), "web_app_url"));
+  send_request(make_object<td_api::answerChatJoinRequestQuery>(query_id, nullptr, web_app_url.str()),
                td::make_unique<TdOnOkQueryCallback>(std::move(query)));
   return td::Status::OK();
 }
