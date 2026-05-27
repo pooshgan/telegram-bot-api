@@ -1401,6 +1401,9 @@ class Client::JsonChat final : public td::Jsonable {
           if (supergroup_info->is_direct_messages && supergroup_info->direct_messages_chat_id != 0) {
             object("parent_chat", JsonChat(supergroup_info->direct_messages_chat_id, client_));
           }
+          if (supergroup_info->guard_bot_user_id != 0) {
+            object("guard_bot", JsonUser(supergroup_info->guard_bot_user_id, client_));
+          }
           if (supergroup_info->location != nullptr) {
             object("location", JsonChatLocation(supergroup_info->location.get()));
           }
@@ -9130,6 +9133,7 @@ void Client::on_update(object_ptr<td_api::Object> result) {
       supergroup_info->unrestrict_boost_count = full_info->unrestrict_boost_count_;
       supergroup_info->linked_chat_id = full_info->linked_chat_id_;
       supergroup_info->direct_messages_chat_id = full_info->direct_messages_chat_id_;
+      supergroup_info->guard_bot_user_id = full_info->guard_bot_user_id_;
       supergroup_info->location = std::move(full_info->location_);
       supergroup_info->has_hidden_members = full_info->has_hidden_members_;
       supergroup_info->has_aggressive_anti_spam_enabled = full_info->has_aggressive_anti_spam_enabled_;

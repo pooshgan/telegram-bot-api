@@ -1103,6 +1103,7 @@ class Client final : public WebhookActor::Callback {
     int64 linked_chat_id = 0;
     int64 direct_messages_chat_id = 0;
     int64 paid_message_star_count = 0;
+    int64 guard_bot_user_id = 0;
     object_ptr<td_api::chatLocation> location;
     object_ptr<td_api::ChatMemberStatus> status;
     bool is_supergroup = false;
