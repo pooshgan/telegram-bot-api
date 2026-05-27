@@ -5364,6 +5364,9 @@ class Client::JsonChatJoinRequest final : public td::Jsonable {
     if (update_->invite_link_ != nullptr) {
       object("invite_link", JsonChatInviteLink(update_->invite_link_.get(), client_));
     }
+    if (update_->query_id_ != 0) {
+      object("query_id", td::to_string(update_->query_id_));
+    }
   }
 
  private:
