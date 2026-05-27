@@ -1943,6 +1943,19 @@ class Client::JsonDocument final : public td::Jsonable {
   const Client *client_;
 };
 
+class Client::JsonLink final : public td::Jsonable {
+ public:
+  explicit JsonLink(const td::string &url) : url_(url) {
+  }
+  void store(td::JsonValueScope *scope) const {
+    auto object = scope->enter_object();
+    object("url", url_);
+  }
+
+ private:
+  const td::string &url_;
+};
+
 class Client::JsonPhotoSize final : public td::Jsonable {
  public:
   JsonPhotoSize(const td_api::photoSize *photo_size, const Client *client) : photo_size_(photo_size), client_(client) {
@@ -2342,7 +2355,8 @@ class Client::JsonPollMedia final : public td::Jsonable {
         break;
       }
       case td_api::pollMediaLink::ID: {
-        // auto media = static_cast<const td_api::pollMediaLink *>(media_);
+        auto media = static_cast<const td_api::pollMediaLink *>(media_);
+        object("link", JsonLink(media->url_));
         break;
       }
       case td_api::pollMediaLocation::ID: {
