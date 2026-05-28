@@ -809,27 +809,12 @@ class Client::JsonLiveLocation final : public td::Jsonable {
 
 class Client::JsonLocation final : public td::Jsonable {
  public:
-  JsonLocation(const td_api::location *location, double expires_in = 0.0, int32 live_period = 0, int32 heading = 0,
-               int32 proximity_alert_radius = 0)
-      : location_(location)
-      , expires_in_(expires_in)
-      , live_period_(live_period)
-      , heading_(heading)
-      , proximity_alert_radius_(proximity_alert_radius) {
+  JsonLocation(const td_api::location *location) : location_(location) {
   }
   void store(td::JsonValueScope *scope) const {
     auto object = scope->enter_object();
     object("latitude", location_->latitude_);
     object("longitude", location_->longitude_);
-    if (expires_in_ > 0.0) {
-      object("live_period", live_period_);
-      if (heading_ > 0) {
-        object("heading", heading_);
-      }
-      if (proximity_alert_radius_ > 0) {
-        object("proximity_alert_radius", proximity_alert_radius_);
-      }
-    }
     if (location_->horizontal_accuracy_ > 0) {
       object("horizontal_accuracy", location_->horizontal_accuracy_);
     }
@@ -837,10 +822,6 @@ class Client::JsonLocation final : public td::Jsonable {
 
  private:
   const td_api::location *location_;
-  double expires_in_;
-  int32 live_period_;
-  int32 heading_;
-  int32 proximity_alert_radius_;
 };
 
 class Client::JsonReactionType final : public td::Jsonable {
