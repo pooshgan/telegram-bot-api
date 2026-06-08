@@ -645,6 +645,206 @@ class Client::JsonVectorEntities final : public td::Jsonable {
   const Client *client_;
 };
 
+class Client::JsonRichText final : public td::Jsonable {
+ public:
+  JsonRichText(const td_api::RichText *text, const Client *client) : text_(text), client_(client) {
+  }
+  void store(td::JsonValueScope *scope) const {
+    auto text_id = text_->get_id();
+    if (text_id == td_api::richTextPlain::ID) {
+      const auto *text = static_cast<const td_api::richTextPlain *>(text_);
+      *scope << td::JsonString(text->text_);
+      return;
+    }
+    if (text_id == td_api::richTextIcon::ID) {
+      LOG(ERROR) << "Receive richTextIcon";
+      *scope << td::JsonString(td::Slice());
+      return;
+    }
+    if (text_id == td_api::richTexts::ID) {
+      auto array = scope->enter_array();
+      for (const auto &text : static_cast<const td_api::richTexts *>(text_)->texts_) {
+        array << JsonRichText(text.get(), client_);
+      }
+      return;
+    }
+    auto object = scope->enter_object();
+    switch (text_id) {
+      case td_api::richTextBold::ID: {
+        const auto *text = static_cast<const td_api::richTextBold *>(text_);
+        object("type", "bold");
+        object("text", JsonRichText(text->text_.get(), client_));
+        break;
+      }
+      case td_api::richTextItalic::ID: {
+        const auto *text = static_cast<const td_api::richTextItalic *>(text_);
+        object("type", "italic");
+        object("text", JsonRichText(text->text_.get(), client_));
+        break;
+      }
+      case td_api::richTextUnderline::ID: {
+        const auto *text = static_cast<const td_api::richTextUnderline *>(text_);
+        object("type", "underline");
+        object("text", JsonRichText(text->text_.get(), client_));
+        break;
+      }
+      case td_api::richTextStrikethrough::ID: {
+        const auto *text = static_cast<const td_api::richTextStrikethrough *>(text_);
+        object("type", "strikethrough");
+        object("text", JsonRichText(text->text_.get(), client_));
+        break;
+      }
+      case td_api::richTextSpoiler::ID: {
+        const auto *text = static_cast<const td_api::richTextSpoiler *>(text_);
+        object("type", "spoiler");
+        object("text", JsonRichText(text->text_.get(), client_));
+        break;
+      }
+      case td_api::richTextDateTime::ID: {
+        const auto *text = static_cast<const td_api::richTextDateTime *>(text_);
+        object("type", "date_time");
+        object("text", JsonRichText(text->text_.get(), client_));
+        object("unix_time", text->unix_time_);
+        object("date_time_format", get_date_time_format(text->formatting_type_));
+        break;
+      }
+      case td_api::richTextMention::ID: {
+        const auto *text = static_cast<const td_api::richTextMention *>(text_);
+        object("type", "mention");
+        object("text", JsonRichText(text->text_.get(), client_));
+        object("username", text->username_);
+        break;
+      }
+      case td_api::richTextHashtag::ID: {
+        const auto *text = static_cast<const td_api::richTextHashtag *>(text_);
+        object("type", "hashtag");
+        object("text", JsonRichText(text->text_.get(), client_));
+        object("hashtag", text->hashtag_);
+        break;
+      }
+      case td_api::richTextCashtag::ID: {
+        const auto *text = static_cast<const td_api::richTextCashtag *>(text_);
+        object("type", "cashtag");
+        object("text", JsonRichText(text->text_.get(), client_));
+        object("cashtag", text->cashtag_);
+        break;
+      }
+      case td_api::richTextBotCommand::ID: {
+        const auto *text = static_cast<const td_api::richTextBotCommand *>(text_);
+        object("type", "bot_command");
+        object("text", JsonRichText(text->text_.get(), client_));
+        object("bot_command", text->bot_command_);
+        break;
+      }
+      case td_api::richTextFixed::ID: {
+        const auto *text = static_cast<const td_api::richTextFixed *>(text_);
+        object("type", "code");
+        object("text", JsonRichText(text->text_.get(), client_));
+        break;
+      }
+      case td_api::richTextMentionName::ID: {
+        const auto *text = static_cast<const td_api::richTextMentionName *>(text_);
+        object("type", "text_mention");
+        object("text", JsonRichText(text->text_.get(), client_));
+        object("user", JsonUser(text->user_id_, client_));
+        break;
+      }
+      case td_api::richTextUrl::ID: {
+        const auto *text = static_cast<const td_api::richTextUrl *>(text_);
+        object("type", "url");
+        object("text", JsonRichText(text->text_.get(), client_));
+        object("url", text->url_);
+        break;
+      }
+      case td_api::richTextEmailAddress::ID: {
+        const auto *text = static_cast<const td_api::richTextEmailAddress *>(text_);
+        object("type", "email_address");
+        object("text", JsonRichText(text->text_.get(), client_));
+        object("email_address", text->email_address_);
+        break;
+      }
+      case td_api::richTextBankCardNumber::ID: {
+        const auto *text = static_cast<const td_api::richTextBankCardNumber *>(text_);
+        object("type", "bank_card_number");
+        object("text", JsonRichText(text->text_.get(), client_));
+        object("bank_card_number", text->bank_card_number_);
+        break;
+      }
+      case td_api::richTextSubscript::ID: {
+        const auto *text = static_cast<const td_api::richTextSubscript *>(text_);
+        object("type", "subscript");
+        object("text", JsonRichText(text->text_.get(), client_));
+        break;
+      }
+      case td_api::richTextSuperscript::ID: {
+        const auto *text = static_cast<const td_api::richTextSuperscript *>(text_);
+        object("type", "superscript");
+        object("text", JsonRichText(text->text_.get(), client_));
+        break;
+      }
+      case td_api::richTextMarked::ID: {
+        const auto *text = static_cast<const td_api::richTextMarked *>(text_);
+        object("type", "marked");
+        object("text", JsonRichText(text->text_.get(), client_));
+        break;
+      }
+      case td_api::richTextPhoneNumber::ID: {
+        const auto *text = static_cast<const td_api::richTextPhoneNumber *>(text_);
+        object("type", "phone_number");
+        object("text", JsonRichText(text->text_.get(), client_));
+        object("phone_number", text->phone_number_);
+        break;
+      }
+      case td_api::richTextCustomEmoji::ID: {
+        const auto *text = static_cast<const td_api::richTextCustomEmoji *>(text_);
+        object("type", "custom_emoji");
+        object("custom_emoji_id", td::to_string(text->custom_emoji_id_));
+        object("alternative_text", text->alternative_text_);
+        break;
+      }
+      case td_api::richTextMathematicalExpression::ID: {
+        const auto *text = static_cast<const td_api::richTextMathematicalExpression *>(text_);
+        object("type", "mathematical_expression");
+        object("expression", text->expression_);
+        break;
+      }
+      case td_api::richTextReference::ID: {
+        const auto *text = static_cast<const td_api::richTextReference *>(text_);
+        object("type", "reference");
+        object("text", JsonRichText(text->text_.get(), client_));
+        object("name", text->name_);
+        break;
+      }
+      case td_api::richTextReferenceLink::ID: {
+        const auto *text = static_cast<const td_api::richTextReferenceLink *>(text_);
+        object("type", "reference_link");
+        object("text", JsonRichText(text->text_.get(), client_));
+        object("reference_name", text->reference_name_);
+        break;
+      }
+      case td_api::richTextAnchor::ID: {
+        const auto *text = static_cast<const td_api::richTextAnchor *>(text_);
+        object("type", "anchor");
+        object("name", text->name_);
+        break;
+      }
+      case td_api::richTextAnchorLink::ID: {
+        const auto *text = static_cast<const td_api::richTextAnchorLink *>(text_);
+        object("type", "anchor_link");
+        object("text", JsonRichText(text->text_.get(), client_));
+        object("anchor_name", text->anchor_name_);
+        break;
+      }
+      default:
+        UNREACHABLE();
+    }
+  }
+
+ private:
+  const td_api::RichText *text_;
+  const Client *client_;
+};
+
 class Client::JsonMaskPosition final : public td::Jsonable {
  public:
   explicit JsonMaskPosition(const td_api::maskPosition *mask_position) : mask_position_(mask_position) {

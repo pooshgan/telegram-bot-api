@@ -154,6 +154,7 @@ class Client final : public WebhookActor::Callback {
   class JsonSuggestedPostRefunded;
   class JsonEntity;
   class JsonVectorEntities;
+  class JsonRichText;
   class JsonWebAppInfo;
   class JsonCopyTextButton;
   class JsonInlineKeyboardButton;
