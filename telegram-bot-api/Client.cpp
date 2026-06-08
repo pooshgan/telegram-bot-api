@@ -259,6 +259,7 @@ bool Client::init_methods() {
   methods_.emplace("sendmediagroup", &Client::process_send_media_group_query);
   methods_.emplace("sendchataction", &Client::process_send_chat_action_query);
   methods_.emplace("sendmessagedraft", &Client::process_send_message_draft_query);
+  methods_.emplace("sendrichmessagedraft", &Client::process_send_rich_message_draft_query);
   methods_.emplace("setmessagereaction", &Client::process_set_message_reaction_query);
   methods_.emplace("editmessagetext", &Client::process_edit_message_text_query);
   methods_.emplace("editmessagelivelocation", &Client::process_edit_message_live_location_query);
@@ -11459,6 +11460,42 @@ td::Result<td_api::object_ptr<td_api::inputMessageText>> Client::get_input_messa
   return make_object<td_api::inputMessageText>(std::move(formatted_text), std::move(link_preview_options), false);
 }
 
+td::Result<td_api::object_ptr<td_api::inputRichMessage>> Client::get_input_rich_message(const Query *query) {
+  auto rich_message = query->arg("rich_message");
+  if (rich_message.empty()) {
+    return td::Status::Error(400, "Rich message must be non-empty");
+  }
+
+  LOG(INFO) << "Parsing JSON object: " << rich_message;
+  auto r_value = json_decode(rich_message);
+  if (r_value.is_error()) {
+    LOG(INFO) << "Can't parse JSON object: " << r_value.error();
+    return td::Status::Error(400, "Can't parse rich message JSON object");
+  }
+
+  return get_input_rich_message(r_value.move_as_ok());
+}
+
+td::Result<td_api::object_ptr<td_api::inputRichMessage>> Client::get_input_rich_message(td::JsonValue &&value) {
+  if (value.type() != td::JsonValue::Type::Object) {
+    return td::Status::Error(400, "Object expected as rich message");
+  }
+  auto &object = value.get_object();
+  TRY_RESULT(is_rtl, object.get_optional_bool_field("is_rtl"));
+  TRY_RESULT(skip_entity_detection, object.get_optional_bool_field("skip_entity_detection"));
+  auto result = make_object<td_api::inputRichMessage>(nullptr, is_rtl, !skip_entity_detection);
+  if (object.has_field("markdown")) {
+    TRY_RESULT(text, object.get_required_string_field("markdown"));
+    result->source_ = make_object<td_api::richMessageSourceMarkdown>(text);
+  } else if (object.has_field("html")) {
+    TRY_RESULT(text, object.get_required_string_field("html"));
+    result->source_ = make_object<td_api::richMessageSourceHtml>(text);
+  } else {
+    return td::Status::Error(400, "Rich message must be non-empty");
+  }
+  return std::move(result);
+}
+
 td::Result<td_api::object_ptr<td_api::location>> Client::get_location(const Query *query) {
   auto latitude = trim(query->arg("latitude"));
   if (latitude.empty()) {
@@ -13613,6 +13650,22 @@ td::Status Client::process_send_message_draft_query(PromisedQueryPtr &query) {
                send_request(
                    make_object<td_api::sendTextMessageDraft>(chat_id, forum_topic_id, draft_id, std::move(text)),
                    td::make_unique<TdOnOkQueryCallback>(std::move(query)));
+             });
+  return td::Status::OK();
+}
+
+td::Status Client::process_send_rich_message_draft_query(PromisedQueryPtr &query) {
+  auto chat_id_str = query->arg("chat_id");
+  auto forum_topic_id = get_forum_topic_id(query.get(), "message_thread_id");
+  auto draft_id = td::to_integer<int64>(query->arg("draft_id"));
+  TRY_RESULT(rich_message, get_input_rich_message(query.get()));
+
+  check_chat(chat_id_str, AccessRights::Write, std::move(query),
+             [this, forum_topic_id, draft_id, rich_message = std::move(rich_message)](int64 chat_id,
+                                                                                      PromisedQueryPtr query) mutable {
+               send_request(make_object<td_api::sendRichMessageDraft>(chat_id, forum_topic_id, draft_id,
+                                                                      std::move(rich_message)),
+                            td::make_unique<TdOnOkQueryCallback>(std::move(query)));
              });
   return td::Status::OK();
 }

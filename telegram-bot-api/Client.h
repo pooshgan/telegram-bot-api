@@ -652,6 +652,10 @@ class Client final : public WebhookActor::Callback {
       td::string text, object_ptr<td_api::linkPreviewOptions> link_preview_options, td::string parse_mode,
       td::JsonValue &&input_entities);
 
+  static td::Result<object_ptr<td_api::inputRichMessage>> get_input_rich_message(const Query *query);
+
+  static td::Result<object_ptr<td_api::inputRichMessage>> get_input_rich_message(td::JsonValue &&value);
+
   static td::Result<object_ptr<td_api::location>> get_location(const Query *query);
 
   static td::Result<object_ptr<td_api::location>> get_location(const td::JsonObject &object);
@@ -820,6 +824,7 @@ class Client final : public WebhookActor::Callback {
   td::Status process_send_media_group_query(PromisedQueryPtr &query);
   td::Status process_send_chat_action_query(PromisedQueryPtr &query);
   td::Status process_send_message_draft_query(PromisedQueryPtr &query);
+  td::Status process_send_rich_message_draft_query(PromisedQueryPtr &query);
   td::Status process_set_message_reaction_query(PromisedQueryPtr &query);
   td::Status process_edit_message_text_query(PromisedQueryPtr &query);
   td::Status process_edit_message_live_location_query(PromisedQueryPtr &query);
