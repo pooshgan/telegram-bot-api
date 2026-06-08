@@ -11254,43 +11254,7 @@ td::Result<td_api::object_ptr<td_api::TextEntityType>> Client::get_text_entity_t
   if (type == "date_time") {
     TRY_RESULT(unix_time, object.get_required_int_field("unix_time"));
     TRY_RESULT(format, object.get_optional_string_field("date_time_format"));
-    bool is_invalid = false;
-    auto formatting_type = [&format, &is_invalid]() -> object_ptr<td_api::DateTimeFormattingType> {
-      if (format.empty()) {
-        return nullptr;
-      }
-      if (format == "r" || format == "R") {
-        return make_object<td_api::dateTimeFormattingTypeRelative>();
-      }
-      auto result = make_object<td_api::dateTimeFormattingTypeAbsolute>();
-      for (auto c : format) {
-        switch (c) {
-          case 't':
-            result->time_precision_ = make_object<td_api::dateTimePartPrecisionShort>();
-            break;
-          case 'T':
-            result->time_precision_ = make_object<td_api::dateTimePartPrecisionLong>();
-            break;
-          case 'd':
-            result->date_precision_ = make_object<td_api::dateTimePartPrecisionShort>();
-            break;
-          case 'D':
-            result->date_precision_ = make_object<td_api::dateTimePartPrecisionLong>();
-            break;
-          case 'w':
-          case 'W':
-            result->show_day_of_week_ = true;
-            break;
-          default:
-            is_invalid = true;
-            break;
-        }
-      }
-      return std::move(result);
-    }();
-    if (is_invalid) {
-      return td::Status::Error(400, "Invalid date-time format specified");
-    }
+    TRY_RESULT(formatting_type, get_date_time_formatting_type(format));
     return make_object<td_api::textEntityTypeDateTime>(unix_time, std::move(formatting_type));
   }
   if (type == "mention" || type == "hashtag" || type == "cashtag" || type == "bot_command" || type == "url" ||
@@ -18548,6 +18512,39 @@ td::string Client::get_date_time_format(const object_ptr<td_api::DateTimeFormatt
       UNREACHABLE();
       return {};
   }
+}
+
+td::Result<td_api::object_ptr<td_api::DateTimeFormattingType>> Client::get_date_time_formatting_type(td::Slice format) {
+  if (format.empty()) {
+    return nullptr;
+  }
+  if (format == "r" || format == "R") {
+    return make_object<td_api::dateTimeFormattingTypeRelative>();
+  }
+  auto result = make_object<td_api::dateTimeFormattingTypeAbsolute>();
+  for (auto c : format) {
+    switch (c) {
+      case 't':
+        result->time_precision_ = make_object<td_api::dateTimePartPrecisionShort>();
+        break;
+      case 'T':
+        result->time_precision_ = make_object<td_api::dateTimePartPrecisionLong>();
+        break;
+      case 'd':
+        result->date_precision_ = make_object<td_api::dateTimePartPrecisionShort>();
+        break;
+      case 'D':
+        result->date_precision_ = make_object<td_api::dateTimePartPrecisionLong>();
+        break;
+      case 'w':
+      case 'W':
+        result->show_day_of_week_ = true;
+        break;
+      default:
+        return td::Status::Error(400, "Invalid date-time format specified");
+    }
+  }
+  return std::move(result);
 }
 
 td::string Client::get_passport_element_type(int32 id) {
