@@ -611,48 +611,7 @@ class Client::JsonEntity final : public td::Jsonable {
         auto entity = static_cast<const td_api::textEntityTypeDateTime *>(entity_->type_.get());
         object("type", "date_time");
         object("unix_time", entity->unix_time_);
-        td::string format;
-        if (entity->formatting_type_ != nullptr) {
-          switch (entity->formatting_type_->get_id()) {
-            case td_api::dateTimeFormattingTypeRelative::ID:
-              format = "r";
-              break;
-            case td_api::dateTimeFormattingTypeAbsolute::ID: {
-              auto abs = static_cast<const td_api::dateTimeFormattingTypeAbsolute *>(entity->formatting_type_.get());
-              if (abs->show_day_of_week_) {
-                format += 'w';
-              }
-              switch (abs->date_precision_->get_id()) {
-                case td_api::dateTimePartPrecisionNone::ID:
-                  break;
-                case td_api::dateTimePartPrecisionShort::ID:
-                  format += 'd';
-                  break;
-                case td_api::dateTimePartPrecisionLong::ID:
-                  format += 'D';
-                  break;
-                default:
-                  UNREACHABLE();
-              }
-              switch (abs->time_precision_->get_id()) {
-                case td_api::dateTimePartPrecisionNone::ID:
-                  break;
-                case td_api::dateTimePartPrecisionShort::ID:
-                  format += 't';
-                  break;
-                case td_api::dateTimePartPrecisionLong::ID:
-                  format += 'T';
-                  break;
-                default:
-                  UNREACHABLE();
-              }
-              break;
-            }
-            default:
-              UNREACHABLE();
-          }
-        }
-        object("date_time_format", format);
+        object("date_time_format", get_date_time_format(entity->formatting_type_));
         break;
       }
       default:
@@ -18543,6 +18502,51 @@ td::string Client::get_chat_member_status(const object_ptr<td_api::ChatMemberSta
     default:
       UNREACHABLE();
       return "";
+  }
+}
+
+td::string Client::get_date_time_format(const object_ptr<td_api::DateTimeFormattingType> &formatting_type) {
+  if (formatting_type == nullptr) {
+    return td::string();
+  }
+  switch (formatting_type->get_id()) {
+    case td_api::dateTimeFormattingTypeRelative::ID:
+      return "r";
+    case td_api::dateTimeFormattingTypeAbsolute::ID: {
+      td::string format;
+      auto abs = static_cast<const td_api::dateTimeFormattingTypeAbsolute *>(formatting_type.get());
+      if (abs->show_day_of_week_) {
+        format += 'w';
+      }
+      switch (abs->date_precision_->get_id()) {
+        case td_api::dateTimePartPrecisionNone::ID:
+          break;
+        case td_api::dateTimePartPrecisionShort::ID:
+          format += 'd';
+          break;
+        case td_api::dateTimePartPrecisionLong::ID:
+          format += 'D';
+          break;
+        default:
+          UNREACHABLE();
+      }
+      switch (abs->time_precision_->get_id()) {
+        case td_api::dateTimePartPrecisionNone::ID:
+          break;
+        case td_api::dateTimePartPrecisionShort::ID:
+          format += 't';
+          break;
+        case td_api::dateTimePartPrecisionLong::ID:
+          format += 'T';
+          break;
+        default:
+          UNREACHABLE();
+      }
+      return format;
+    }
+    default:
+      UNREACHABLE();
+      return {};
   }
 }
 

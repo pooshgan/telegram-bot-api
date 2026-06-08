@@ -1458,6 +1458,8 @@ class Client final : public WebhookActor::Callback {
 
   static td::string get_chat_member_status(const object_ptr<td_api::ChatMemberStatus> &status);
 
+  static td::string get_date_time_format(const object_ptr<td_api::DateTimeFormattingType> &formatting_type);
+
   static td::string get_passport_element_type(int32 id);
 
   static object_ptr<td_api::PassportElementType> get_passport_element_type(td::Slice type);
