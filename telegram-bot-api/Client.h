@@ -798,6 +798,7 @@ class Client final : public WebhookActor::Callback {
   td::Status process_get_user_profile_photos_query(PromisedQueryPtr &query);
   td::Status process_get_user_profile_audios_query(PromisedQueryPtr &query);
   td::Status process_send_message_query(PromisedQueryPtr &query);
+  td::Status process_send_rich_message_query(PromisedQueryPtr &query);
   td::Status process_send_animation_query(PromisedQueryPtr &query);
   td::Status process_send_audio_query(PromisedQueryPtr &query);
   td::Status process_send_dice_query(PromisedQueryPtr &query);

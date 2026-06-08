@@ -233,6 +233,7 @@ bool Client::init_methods() {
   methods_.emplace("getuserprofilephotos", &Client::process_get_user_profile_photos_query);
   methods_.emplace("getuserprofileaudios", &Client::process_get_user_profile_audios_query);
   methods_.emplace("sendmessage", &Client::process_send_message_query);
+  methods_.emplace("sendrichmessage", &Client::process_send_rich_message_query);
   methods_.emplace("sendanimation", &Client::process_send_animation_query);
   methods_.emplace("sendaudio", &Client::process_send_audio_query);
   methods_.emplace("senddice", &Client::process_send_dice_query);
@@ -13053,6 +13054,22 @@ td::Status Client::process_send_message_query(PromisedQueryPtr &query) {
 
   TRY_RESULT(input_message_text, get_input_message_text(query.get()));
   do_send_message(std::move(input_message_text), std::move(query));
+  return td::Status::OK();
+}
+
+td::Status Client::process_send_rich_message_query(PromisedQueryPtr &query) {
+  auto r_chat_id = td::to_integer_safe<int64>(query->arg("chat_id"));
+  if (r_chat_id.is_ok()) {
+    // fast path
+    auto it = yet_unsent_message_count_.find(r_chat_id.ok());
+    if (it != yet_unsent_message_count_.end() && it->second >= MAX_CONCURRENTLY_SENT_CHAT_MESSAGES) {
+      fail_query_flood_limit_exceeded(std::move(query));
+      return td::Status::OK();
+    }
+  }
+
+  TRY_RESULT(rich_message, get_input_rich_message(query.get()));
+  do_send_message(make_object<td_api::inputMessageRichMessage>(std::move(rich_message), false), std::move(query));
   return td::Status::OK();
 }
 
