@@ -14204,7 +14204,13 @@ td::Status Client::process_set_message_reaction_query(PromisedQueryPtr &query) {
 }
 
 td::Status Client::process_edit_message_text_query(PromisedQueryPtr &query) {
-  TRY_RESULT(input_message_text, get_input_message_text(query.get()));
+  object_ptr<td_api::InputMessageContent> input_message_text;
+  if (query->has_arg("rich_message")) {
+    TRY_RESULT(input_rich_message, get_input_rich_message(query.get()));
+    input_message_text = make_object<td_api::inputMessageRichMessage>(std::move(input_rich_message), false);
+  } else {
+    TRY_RESULT_ASSIGN(input_message_text, get_input_message_text(query.get()));
+  }
   auto business_connection_id = query->arg("business_connection_id");
   auto chat_id = query->arg("chat_id");
   auto message_id = get_message_id(query.get());
