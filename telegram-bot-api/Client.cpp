@@ -10678,6 +10678,12 @@ td::Result<td_api::object_ptr<td_api::InputMessageContent>> Client::get_input_me
   CHECK(input_message_content.type() == td::JsonValue::Type::Object);
   auto &object = input_message_content.get_object();
 
+  if (object.has_field("rich_message")) {
+    TRY_RESULT(rich_message, object.extract_required_field("rich_message", td::JsonValue::Type::Object));
+    TRY_RESULT(input_rich_message, get_input_rich_message(std::move(rich_message)));
+    return make_object<td_api::inputMessageRichMessage>(std::move(input_rich_message), false);
+  }
+
   TRY_RESULT(message_text, object.get_optional_string_field("message_text"));
 
   if (!message_text.empty()) {
