@@ -984,6 +984,24 @@ class Client::JsonRichBlockListItem final : public td::Jsonable {
   const Client *client_;
 };
 
+class Client::JsonRichMessage final : public td::Jsonable {
+ public:
+  JsonRichMessage(const td_api::richMessage *rich_message, const Client *client)
+      : rich_message_(rich_message), client_(client) {
+  }
+  void store(td::JsonValueScope *scope) const {
+    auto object = scope->enter_object();
+    object("blocks", JsonRichBlocks(rich_message_->blocks_, client_));
+    if (rich_message_->is_rtl_) {
+      object("is_rtl", td::JsonTrue());
+    }
+  }
+
+ private:
+  const td_api::richMessage *rich_message_;
+  const Client *client_;
+};
+
 class Client::JsonMaskPosition final : public td::Jsonable {
  public:
   explicit JsonMaskPosition(const td_api::maskPosition *mask_position) : mask_position_(mask_position) {
@@ -5263,7 +5281,8 @@ void Client::JsonMessage::store(td::JsonValueScope *scope) const {
       break;
     }
     case td_api::messageRichMessage::ID: {
-      // auto content = static_cast<const td_api::messageRichMessage *>(message_->content.get());
+      auto content = static_cast<const td_api::messageRichMessage *>(message_->content.get());
+      object("rich_message", JsonRichMessage(content->message_.get(), client_));
       break;
     }
     default:
@@ -18243,7 +18262,6 @@ bool Client::need_skip_update_message(int64 chat_id, const MessageInfo *message_
     case td_api::messageUpgradedGiftPurchaseOfferRejected::ID:
     case td_api::messageChatHasProtectedContentToggled::ID:
     case td_api::messageChatHasProtectedContentDisableRequested::ID:
-    case td_api::messageRichMessage::ID:
       return true;
     default:
       break;
