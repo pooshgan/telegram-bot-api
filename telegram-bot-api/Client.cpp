@@ -845,6 +845,24 @@ class Client::JsonRichText final : public td::Jsonable {
   const Client *client_;
 };
 
+class Client::JsonRichBlockCaption final : public td::Jsonable {
+ public:
+  JsonRichBlockCaption(const td_api::pageBlockCaption *caption, const Client *client)
+      : caption_(caption), client_(client) {
+  }
+  void store(td::JsonValueScope *scope) const {
+    auto object = scope->enter_object();
+    object("text", JsonRichText(caption_->text_.get(), client_));
+    if (caption_->credit_ != nullptr) {
+      object("credit", JsonRichText(caption_->credit_.get(), client_));
+    }
+  }
+
+ private:
+  const td_api::pageBlockCaption *caption_;
+  const Client *client_;
+};
+
 class Client::JsonMaskPosition final : public td::Jsonable {
  public:
   explicit JsonMaskPosition(const td_api::maskPosition *mask_position) : mask_position_(mask_position) {
