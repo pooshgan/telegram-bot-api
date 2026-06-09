@@ -645,6 +645,34 @@ class Client::JsonVectorEntities final : public td::Jsonable {
   const Client *client_;
 };
 
+class Client::JsonRichBlock final : public td::Jsonable {
+ public:
+  JsonRichBlock(const td_api::PageBlock *block, const Client *client) : block_(block), client_(client) {
+  }
+  void store(td::JsonValueScope *scope) const;
+
+ private:
+  const td_api::PageBlock *block_;
+  const Client *client_;
+};
+
+class Client::JsonRichBlocks final : public td::Jsonable {
+ public:
+  JsonRichBlocks(const td::vector<object_ptr<td_api::PageBlock>> &blocks, const Client *client)
+      : blocks_(blocks), client_(client) {
+  }
+  void store(td::JsonValueScope *scope) const {
+    auto array = scope->enter_array();
+    for (const auto &block : blocks_) {
+      array << JsonRichBlock(block.get(), client_);
+    }
+  }
+
+ private:
+  const td::vector<object_ptr<td_api::PageBlock>> &blocks_;
+  const Client *client_;
+};
+
 class Client::JsonRichText final : public td::Jsonable {
  public:
   JsonRichText(const td_api::RichText *text, const Client *client) : text_(text), client_(client) {
@@ -896,6 +924,23 @@ class Client::JsonRichTableCell final : public td::Jsonable {
   const Client *client_;
 };
 
+class Client::JsonRichTableRow final : public td::Jsonable {
+ public:
+  JsonRichTableRow(const td::vector<object_ptr<td_api::pageBlockTableCell>> &cells, const Client *client)
+      : cells_(cells), client_(client) {
+  }
+  void store(td::JsonValueScope *scope) const {
+    auto array = scope->enter_array();
+    for (const auto &cell : cells_) {
+      array << JsonRichTableCell(cell.get(), client_);
+    }
+  }
+
+ private:
+  const td::vector<object_ptr<td_api::pageBlockTableCell>> &cells_;
+  const Client *client_;
+};
+
 class Client::JsonRichBlockCaption final : public td::Jsonable {
  public:
   JsonRichBlockCaption(const td_api::pageBlockCaption *caption, const Client *client)
@@ -911,6 +956,31 @@ class Client::JsonRichBlockCaption final : public td::Jsonable {
 
  private:
   const td_api::pageBlockCaption *caption_;
+  const Client *client_;
+};
+
+class Client::JsonRichBlockListItem final : public td::Jsonable {
+ public:
+  JsonRichBlockListItem(const td_api::pageBlockListItem *item, const Client *client) : item_(item), client_(client) {
+  }
+  void store(td::JsonValueScope *scope) const {
+    auto object = scope->enter_object();
+    object("label", item_->label_);
+    object("blocks", JsonRichBlocks(item_->blocks_, client_));
+    if (item_->has_checkbox_) {
+      object("has_checkbox", td::JsonTrue());
+      if (item_->is_checked_) {
+        object("is_checked", td::JsonTrue());
+      }
+    }
+    if (!item_->type_.empty()) {
+      object("type", item_->type_);
+      object("value", item_->value_);
+    }
+  }
+
+ private:
+  const td_api::pageBlockListItem *item_;
   const Client *client_;
 };
 
@@ -4365,6 +4435,219 @@ class Client::JsonTextQuote final : public td::Jsonable {
   const td_api::textQuote *quote_;
   const Client *client_;
 };
+
+void Client::JsonRichBlock::store(td::JsonValueScope *scope) const {
+  auto object = scope->enter_object();
+  switch (block_->get_id()) {
+    case td_api::pageBlockSectionHeading::ID: {
+      const auto *block = static_cast<const td_api::pageBlockSectionHeading *>(block_);
+      object("type", "heading");
+      object("text", JsonRichText(block->text_.get(), client_));
+      object("size", block->size_);
+      return;
+    }
+    case td_api::pageBlockParagraph::ID: {
+      const auto *block = static_cast<const td_api::pageBlockParagraph *>(block_);
+      object("type", "paragraph");
+      object("text", JsonRichText(block->text_.get(), client_));
+      return;
+    }
+    case td_api::pageBlockPreformatted::ID: {
+      const auto *block = static_cast<const td_api::pageBlockPreformatted *>(block_);
+      object("type", "pre");
+      object("text", JsonRichText(block->text_.get(), client_));
+      if (!block->language_.empty()) {
+        object("language", block->language_);
+      }
+      return;
+    }
+    case td_api::pageBlockFooter::ID: {
+      const auto *block = static_cast<const td_api::pageBlockFooter *>(block_);
+      object("type", "footer");
+      object("text", JsonRichText(block->footer_.get(), client_));
+      return;
+    }
+    case td_api::pageBlockDivider::ID:
+      object("type", "divider");
+      return;
+    case td_api::pageBlockMathematicalExpression::ID: {
+      const auto *block = static_cast<const td_api::pageBlockMathematicalExpression *>(block_);
+      object("type", "mathematical_expression");
+      object("expression", block->expression_);
+      return;
+    }
+    case td_api::pageBlockAnchor::ID: {
+      const auto *block = static_cast<const td_api::pageBlockAnchor *>(block_);
+      object("type", "anchor");
+      object("name", block->name_);
+      return;
+    }
+    case td_api::pageBlockList::ID: {
+      const auto *block = static_cast<const td_api::pageBlockList *>(block_);
+      object("type", "list");
+      object("items", td::json_array(block->items_, [client = client_](const auto &item) {
+               return JsonRichBlockListItem(item.get(), client);
+             }));
+      return;
+    }
+    case td_api::pageBlockBlockQuote::ID: {
+      const auto *block = static_cast<const td_api::pageBlockBlockQuote *>(block_);
+      object("type", "blockquote");
+      object("blocks", JsonRichBlocks(block->blocks_, client_));
+      if (block->credit_ != nullptr) {
+        object("credit", JsonRichText(block->credit_.get(), client_));
+      }
+      return;
+    }
+    case td_api::pageBlockPullQuote::ID: {
+      const auto *block = static_cast<const td_api::pageBlockPullQuote *>(block_);
+      object("type", "pullquote");
+      object("text", JsonRichText(block->text_.get(), client_));
+      if (block->credit_ != nullptr) {
+        object("credit", JsonRichText(block->credit_.get(), client_));
+      }
+      return;
+    }
+    case td_api::pageBlockCollage::ID: {
+      const auto *block = static_cast<const td_api::pageBlockCollage *>(block_);
+      object("type", "collage");
+      object("blocks", JsonRichBlocks(block->blocks_, client_));
+      if (block->caption_ != nullptr) {
+        object("caption", JsonRichBlockCaption(block->caption_.get(), client_));
+      }
+      return;
+    }
+    case td_api::pageBlockSlideshow::ID: {
+      const auto *block = static_cast<const td_api::pageBlockSlideshow *>(block_);
+      object("type", "slideshow");
+      object("blocks", JsonRichBlocks(block->blocks_, client_));
+      if (block->caption_ != nullptr) {
+        object("caption", JsonRichBlockCaption(block->caption_.get(), client_));
+      }
+      return;
+    }
+    case td_api::pageBlockTable::ID: {
+      const auto *block = static_cast<const td_api::pageBlockTable *>(block_);
+      object("type", "table");
+      object("cells", td::json_array(block->cells_,
+                                     [client = client_](const auto &row) { return JsonRichTableRow(row, client); }));
+      if (block->caption_ != nullptr) {
+        object("caption", JsonRichText(block->caption_.get(), client_));
+      }
+      if (block->is_bordered_) {
+        object("is_bordered", td::JsonTrue());
+      }
+      if (block->is_striped_) {
+        object("is_striped", td::JsonTrue());
+      }
+      return;
+    }
+    case td_api::pageBlockDetails::ID: {
+      const auto *block = static_cast<const td_api::pageBlockDetails *>(block_);
+      object("type", "details");
+      object("summary", JsonRichText(block->header_.get(), client_));
+      object("blocks", JsonRichBlocks(block->blocks_, client_));
+      if (block->is_open_) {
+        object("is_open", td::JsonTrue());
+      }
+      return;
+    }
+    case td_api::pageBlockMap::ID: {
+      const auto *block = static_cast<const td_api::pageBlockMap *>(block_);
+      object("type", "map");
+      object("location", JsonLocation(block->location_.get()));
+      object("zoom", block->zoom_);
+      object("width", block->width_);
+      object("height", block->height_);
+      if (block->caption_ != nullptr) {
+        object("caption", JsonRichBlockCaption(block->caption_.get(), client_));
+      }
+      return;
+    }
+    case td_api::pageBlockAnimation::ID: {
+      const auto *block = static_cast<const td_api::pageBlockAnimation *>(block_);
+      if (block->animation_ == nullptr) {
+        break;
+      }
+      object("type", "animation");
+      object("animation", JsonAnimation(block->animation_.get(), false, client_));
+      if (block->caption_ != nullptr) {
+        object("caption", JsonRichBlockCaption(block->caption_.get(), client_));
+      }
+      if (block->need_autoplay_) {
+        object("need_autoplay", td::JsonTrue());
+      }
+      if (block->has_spoiler_) {
+        object("has_spoiler", td::JsonTrue());
+      }
+      return;
+    }
+    case td_api::pageBlockAudio::ID: {
+      const auto *block = static_cast<const td_api::pageBlockAudio *>(block_);
+      if (block->audio_ == nullptr) {
+        break;
+      }
+      object("type", "audio");
+      object("audio", JsonAudio(block->audio_.get(), client_));
+      if (block->caption_ != nullptr) {
+        object("caption", JsonRichBlockCaption(block->caption_.get(), client_));
+      }
+      return;
+    }
+    case td_api::pageBlockPhoto::ID: {
+      const auto *block = static_cast<const td_api::pageBlockPhoto *>(block_);
+      if (block->photo_ == nullptr) {
+        break;
+      }
+      object("type", "photo");
+      object("photo", JsonPhoto(block->photo_.get(), client_));
+      if (block->caption_ != nullptr) {
+        object("caption", JsonRichBlockCaption(block->caption_.get(), client_));
+      }
+      if (block->has_spoiler_) {
+        object("has_spoiler", td::JsonTrue());
+      }
+      return;
+    }
+    case td_api::pageBlockVideo::ID: {
+      const auto *block = static_cast<const td_api::pageBlockVideo *>(block_);
+      if (block->video_ == nullptr) {
+        break;
+      }
+      object("type", "video");
+      object("video", JsonVideo(block->video_.get(), nullptr, 0, nullptr, client_));
+      if (block->caption_ != nullptr) {
+        object("caption", JsonRichBlockCaption(block->caption_.get(), client_));
+      }
+      if (block->need_autoplay_) {
+        object("need_autoplay", td::JsonTrue());
+      }
+      if (block->is_looped_) {
+        object("is_looped", td::JsonTrue());
+      }
+      if (block->has_spoiler_) {
+        object("has_spoiler", td::JsonTrue());
+      }
+      return;
+    }
+    case td_api::pageBlockVoiceNote::ID: {
+      const auto *block = static_cast<const td_api::pageBlockVoiceNote *>(block_);
+      if (block->voice_note_ == nullptr) {
+        break;
+      }
+      object("type", "voice_note");
+      object("voice_note", JsonVoiceNote(block->voice_note_.get(), client_));
+      if (block->caption_ != nullptr) {
+        object("caption", JsonRichBlockCaption(block->caption_.get(), client_));
+      }
+      return;
+    }
+    default:
+      break;
+  }
+  LOG(ERROR) << "Receive " << td_api::to_string(*block_);
+  object("type", "unknown");
+}
 
 void Client::JsonMessage::store(td::JsonValueScope *scope) const {
   CHECK(message_ != nullptr);
