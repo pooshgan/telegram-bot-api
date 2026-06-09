@@ -845,6 +845,57 @@ class Client::JsonRichText final : public td::Jsonable {
   const Client *client_;
 };
 
+class Client::JsonRichTableCell final : public td::Jsonable {
+ public:
+  JsonRichTableCell(const td_api::pageBlockTableCell *cell, const Client *client) : cell_(cell), client_(client) {
+  }
+  void store(td::JsonValueScope *scope) const {
+    auto object = scope->enter_object();
+    if (cell_->text_ != nullptr) {
+      object("text", JsonRichText(cell_->text_.get(), client_));
+    }
+    if (cell_->is_header_) {
+      object("is_header", td::JsonTrue());
+    }
+    if (cell_->colspan_ > 1) {
+      object("colspan", cell_->colspan_);
+    }
+    if (cell_->rowspan_ > 1) {
+      object("rowspan", cell_->rowspan_);
+    }
+    switch (cell_->align_->get_id()) {
+      case td_api::pageBlockHorizontalAlignmentLeft::ID:
+        object("align", "left");
+        break;
+      case td_api::pageBlockHorizontalAlignmentCenter::ID:
+        object("align", "center");
+        break;
+      case td_api::pageBlockHorizontalAlignmentRight::ID:
+        object("align", "right");
+        break;
+      default:
+        UNREACHABLE();
+    }
+    switch (cell_->valign_->get_id()) {
+      case td_api::pageBlockVerticalAlignmentTop::ID:
+        object("valign", "top");
+        break;
+      case td_api::pageBlockVerticalAlignmentMiddle::ID:
+        object("valign", "middle");
+        break;
+      case td_api::pageBlockVerticalAlignmentBottom::ID:
+        object("valign", "bottom");
+        break;
+      default:
+        UNREACHABLE();
+    }
+  }
+
+ private:
+  const td_api::pageBlockTableCell *cell_;
+  const Client *client_;
+};
+
 class Client::JsonRichBlockCaption final : public td::Jsonable {
  public:
   JsonRichBlockCaption(const td_api::pageBlockCaption *caption, const Client *client)
