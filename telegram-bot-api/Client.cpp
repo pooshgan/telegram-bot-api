@@ -17711,7 +17711,7 @@ void Client::add_update_impl(UpdateType update_type, const td::VirtuallyJsonable
 
   send_closure(stat_actor_, &BotStatActor::add_event<ServerBotStat::Update>, ServerBotStat::Update{}, td::Time::now());
 
-  const size_t BUF_SIZE = 1 << 16;
+  const size_t BUF_SIZE = 1 << 18;
   auto buf = td::StackAllocator::alloc(BUF_SIZE);
   td::JsonBuilder jb(td::StringBuilder(buf.as_slice(), true));
   jb.enter_value() << get_update_type_name(update_type);
