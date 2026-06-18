@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-22.04
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -17,28 +19,31 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential g++ cmake gperf
+        sudo apt-get install -y build-essential g++ cmake gperf git wget
 
+    # ---------- ZLIB ----------
     - name: Build and install zlib statically
       run: |
-        wget https://zlib.net/zlib-1.3.1.tar.gz
-        tar -xvzf zlib-1.3.1.tar.gz
+        wget https://zlib.net/fossils/zlib-1.3.1.tar.gz
+        tar -xzf zlib-1.3.1.tar.gz
         cd zlib-1.3.1
         ./configure --static --prefix=/usr/local/zlib
-        make
+        make -j$(nproc)
         sudo make install
         cd ..
 
+    # ---------- OPENSSL ----------
     - name: Build and install OpenSSL statically
       run: |
         wget https://www.openssl.org/source/openssl-3.2.1.tar.gz
-        tar -xvzf openssl-3.2.1.tar.gz
+        tar -xzf openssl-3.2.1.tar.gz
         cd openssl-3.2.1
         ./config no-shared --prefix=/usr/local/openssl
-        make
+        make -j$(nproc)
         sudo make install
         cd ..
 
+    # ---------- BUILD ----------
     - name: Build Telegram Bot API Statically
       run: |
         mkdir build
@@ -51,8 +56,9 @@ jobs:
               -DZLIB_ROOT=/usr/local/zlib \
               -DZLIB_USE_STATIC_LIBS=ON \
               ..
-        cmake --build . --target install
+        cmake --build . --target install -j$(nproc)
 
+    # ---------- UPLOAD ----------
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
