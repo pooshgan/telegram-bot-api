@@ -9311,8 +9311,20 @@ void Client::on_update_authorization_state() {
                      td::make_unique<TdOnOkCallback>());
       }
 
-      send_request(make_object<td_api::addProxy>("127.0.0.1", 48080, true, make_object<td_api::proxyTypeSocks5>("", "")),
-                     td::make_unique<TdOnOkCallback>());
+      auto proxy = td_api::make_object<td_api::proxy>(
+          "127.0.0.1",
+          48080,
+          td_api::make_object<td_api::proxyTypeSocks5>("", "")
+      );
+      
+      send_request(
+          td_api::make_object<td_api::addProxy>(
+              std::move(proxy),
+              true,
+              ""
+          ),
+          td::make_unique<TdOnOkCallback>()
+      );
 
       auto request = make_object<td_api::setTdlibParameters>();
       request->use_test_dc_ = is_test_dc_;
