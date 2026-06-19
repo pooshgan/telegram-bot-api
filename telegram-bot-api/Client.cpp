@@ -9313,7 +9313,7 @@ void Client::on_update_authorization_state() {
 
       auto proxy = td_api::make_object<td_api::proxy>(
           "127.0.0.1",
-          48080,
+          49091,
           td_api::make_object<td_api::proxyTypeSocks5>("", "")
       );
       
